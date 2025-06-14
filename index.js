@@ -107,6 +107,26 @@ async function run() {
 
         })
 
+        app.get('/filtered_data/:filter', async(req , res)=>{
+            const filter_text = req.params.filter;
+            if( filter_text.includes('price high to low')){
+                const pHightoLow = await RoomCollection.find().sort( {pricePerNight: -1}).toArray()
+                res.send(pHightoLow);
+            }else if (filter_text.includes("price low to high")){
+                const pLowtoHigh = await RoomCollection.find().sort({pricePerNight: 1}).toArray();
+                res.send(pLowtoHigh)
+                
+            }else if (filter_text.includes('rating high to low')){
+                const rHightoLow = await RoomCollection.find().sort({roomRating: -1}).toArray();
+                res.send(rHightoLow)
+               
+            }else if (filter_text.includes('ratng low to high')){
+                const rLowtoHigh = await RoomCollection.find().sort({roomRating:1}).toArray();
+                res.send(rLowtoHigh);
+                
+            }
+        } )
+
         console.log("Connected");
     } finally {
 
