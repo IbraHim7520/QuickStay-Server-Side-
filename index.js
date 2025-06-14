@@ -83,7 +83,29 @@ async function run() {
         })
 
 
+        app.delete("/cancel_booking/:id", async(req , res)=>{
+            const id = req.params.id;
+            const filter = {_id: new ObjectId(id)};
+            const document = await Booked_Room_Collection.findOne(filter);
+            const roomid = document?.RoomID
+            if (!roomid) {
+            return res.status(400).send({ error: "RoomID not found in booking." });
+                }
+            const result = await Booked_Room_Collection.deleteOne(filter);
+            if (result.deletedCount == 1){
+                const filter = {_id : new ObjectId(roomid)};
+                const updateDoc = {
+                    $set:{
+                        Booked: false
+                    }
+                }
+                const update_confirm = await RoomCollection.updateOne(filter , updateDoc);
+                if(update_confirm.modifiedCount){
+                    res.send(result)
+                }
+            }
 
+        })
 
         console.log("Connected");
     } finally {
