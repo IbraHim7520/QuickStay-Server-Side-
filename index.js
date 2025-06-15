@@ -166,6 +166,21 @@ async function run() {
             res.send(updateReviewResult)
         })
 
+        app.patch('/update-booking/:id', async(req, res)=>{
+            const id = req.params.id ;
+            const  updatedDate =  req.body.Date
+            const filter = {_id: new ObjectId(id)};
+            const roomData = await Booked_Room_Collection.findOne(filter)
+            const updaeDate = {
+                $set: {
+                    Date: updatedDate
+                }
+            }
+            const result =  await Booked_Room_Collection.updateOne(filter, updaeDate);
+            res.send(result);
+
+        })
+
         console.log("Connected");
     } finally {
 
