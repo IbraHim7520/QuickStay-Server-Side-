@@ -181,6 +181,14 @@ async function run() {
 
         })
 
+        app.get('/get-top-reviews', async(req , res)=>{
+            const rooms = await RoomCollection.find().limit(8).toArray();
+
+            const topReviews = rooms.flatMap( room=> room.reviews || [] )
+            topReviews.sort( (a, b)=> b.Time - a.Time );
+            res.send(topReviews)
+        })
+
         console.log("Connected");
     } finally {
 
