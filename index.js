@@ -11,6 +11,25 @@ const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASS}@clu
 app.get('/', (req, res) => {
     res.send("Hello From Hote Booking Website Backend")
 })
+
+const jtwPass = (req , res , next) =>{
+    const token = req?.headers?.authorization?.split(" ")[1];
+    if(!token){
+        return res.send(401).send({message: "Unauthorized Access!"})
+    }
+
+    jwt.verify(token , process.env.JWT_SECRET , (error , decoded)=>{
+        if (error){
+            return res.send(401).send({message: "Unauthorized Access!"})
+        }   
+        req.tokenEmail = decoded.email
+         next()
+    })
+   
+   
+}
+
+
 const client = new MongoClient(uri, {
     serverApi: {
         version: ServerApiVersion.v1,
@@ -25,6 +44,12 @@ async function run() {
         const database = client.db('Hotel-Room');
         const RoomCollection = database.collection("Rooms");
         const Booked_Room_Collection = database.collection('Booked_Rooms')
+
+        app.post('/jwt', (req , res)=>{
+            const user = {email: req.body.email}
+            const token =  jwt.sign(user , process.env.JWT_SECRET , {expiresIn: "7d"})
+            res.send({token})
+        })
 
         app.get("/roomDetails", async (req, res) => { //Get Highest Rating 6 Room Details
             const RoomsInfo = await RoomCollection.find().sort({ roomRating: -1 }).limit(6).toArray();
@@ -81,8 +106,14 @@ async function run() {
         });
 
 
-        app.get(`/get_booked_room/:email`, async (req, res) => {
+        app.get(`/get_booked_room/:email`,jtwPass , async (req, res) => {
+
+            const decodedEmail = req.tokenEmail;
             const { email } = req.params;
+
+            if( decodedEmail !== email){
+                return res.status(403).send({message : "Data access denid!"})
+            }
             const data_filter = { BookedBy: email };
             const datas = await Booked_Room_Collection.find(data_filter).toArray()
             for (const data of datas) {
