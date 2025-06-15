@@ -39,37 +39,47 @@ async function run() {
             const filter = { _id: new ObjectId(id) };
 
             const result = await RoomCollection.findOne(filter);
+            if (result && result.reviews) {
+                result.reviews.sort((a, b) => b.Time - a.Time);
+            }
             res.send(result);
 
         })
         app.patch('/room_booking/:id', async (req, res) => {
             const id = req.params.id;
             const { Date, RoomID, BookedBy } = req.body;
-            const Room = await RoomCollection.findOne({ _id: new ObjectId(RoomID) })
+
+            const filter = { _id: new ObjectId(RoomID) };
             const Booked_Room_Doc = {
                 Date,
                 RoomID,
                 BookedBy
-            }
-            const setBookedBy = {
-                $addToSet: {
-                    BookedBy: BookedBy
-                }
-            }
-            const updateResult = await RoomCollection.updateOne(Room, setBookedBy);
+            };
+
             const db_response = await Booked_Room_Collection.insertOne(Booked_Room_Doc);
+
             if (db_response.insertedId) {
-                const updte = {
+                const updateDoc = {
                     $set: {
                         Booked: true
+                    },
+                    $addToSet: {
+                        BookedBy: BookedBy
                     }
+                };
+
+                const updateResult = await RoomCollection.updateOne(filter, updateDoc);
+
+                if (updateResult.modifiedCount) {
+                    res.send({ success: true, message: "Room booked successfully." });
+                } else {
+                    res.status(500).send({ error: "Failed to update room." });
                 }
-                const response = RoomCollection.updateOne(Room, updte);
-                if (response) {
-                    res.send(response)
-                }
+            } else {
+                res.status(500).send({ error: "Failed to insert booking." });
             }
-        })
+        });
+
 
         app.get(`/get_booked_room/:email`, async (req, res) => {
             const { email } = req.params;
@@ -94,6 +104,7 @@ async function run() {
             const filter = { _id: new ObjectId(id) };
             const document = await Booked_Room_Collection.findOne(filter);
             const roomid = document?.RoomID
+            const RoomData = await RoomCollection.findOne({ _id: new ObjectId(roomid) });
             if (!roomid) {
                 return res.status(400).send({ error: "RoomID not found in booking." });
             }
@@ -103,6 +114,9 @@ async function run() {
                 const updateDoc = {
                     $set: {
                         Booked: false
+                    },
+                    $pull: {
+                        BookedBy: document.BookedBy
                     }
                 }
                 const update_confirm = await RoomCollection.updateOne(filter, updateDoc);
@@ -140,14 +154,13 @@ async function run() {
             const Id = data.RoomID;
             console.log(Id);
             const filter = { _id: new ObjectId(Id) };
-        
+
             const updateReview = {
                 $push: {
                     reviews: {
                         ...data,
                     }
                 }
-                // Or use $addToSet if you want to prevent duplicates
             };
             const updateReviewResult = await RoomCollection.updateOne(filter, updateReview)
             res.send(updateReviewResult)
